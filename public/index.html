@@ -6,30 +6,20 @@
     <script src='scripts/Flora.min.js' type="text/javascript"></script>
   </head>
   <body>
-    <input type='text' id='txtFirstName' placeholder='First name' />
-    <input type='text' id='txtLastName' placeholder='Last name' />
-    <input type='button' id='btnGetName' value='Save' />
     <script src='http://localhost:1337/socket.io/socket.io.js'></script>
     <script type="text/javascript">
-      var socket = io.connect('http://localhost:1337'),
-        fName = document.getElementById('txtFirstName'),
-        lName = document.getElementById('txtLastName'),
-        btn = document.getElementById('btnGetName');
-
-        btn.addEventListener('click', function() {
-          socket.emit('setName', {firstName: fName.value, lastName: lName.value});
-          return false;
-        });
-
-        socket.on('dataSet', function(data) {
-          alert('data set: ' + data.id);
-        });
+      var socket = io.connect('http://localhost:1337');
+      socket.on('dataSet', function(data) {
+        alert('data set: ' + data.id);
+      });
     </script>
     <script type="text/javascript">
 
       var viewportSize = Burner.System.getWindowSize();
 
       Burner.System.init(function() {
+
+        // provide a callback after frame count exceeds limit
 
         var agent = this.add('Agent', {
           beforeStep: function() {
