@@ -4,4 +4,4 @@ node_modules
 #### FILES ####
 *.DS_Store
 *.swp
-agent_data.txt
+agent_data.json
