@@ -8,13 +8,13 @@ io.sockets.on('connection', function(socket) {
   socket.on('setData', function(data) {
     var stream;
     if (data) {
-    	stream = fs.createWriteStream('agent_data.txt');
+    	stream = fs.createWriteStream('agent_data.json');
     } else {
       return;
     }
 
     stream.on('open', function() {
-      stream.end(JSON.stringify([data]), 'utf-8');
+      stream.end(JSON.stringify(data), 'utf-8');
     });
 
     socket.emit('dataSet', {id: data.id});
