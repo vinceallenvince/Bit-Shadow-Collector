@@ -5,18 +5,18 @@ var connect = require('connect'),
 connect(connect.static(__dirname + '/public')).listen(8000);
 
 io.sockets.on('connection', function(socket) {
-  socket.on('setData', function(data) {
+  socket.on('setData', function(results) {
     var stream;
-    if (data) {
-    	stream = fs.createWriteStream('agent_data.json');
+    if (results.data) {
+    	stream = fs.createWriteStream('data/agent_data' + results.frameNumber + '.json');
     } else {
       return;
     }
 
     stream.on('open', function() {
-      stream.end(JSON.stringify(data), 'utf-8');
+      stream.end(JSON.stringify(results.data), 'utf-8');
     });
 
-    socket.emit('dataSet', {id: data.id});
+    socket.emit('dataSet', results.frameNumber);
   });
 });
