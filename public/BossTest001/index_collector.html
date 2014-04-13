@@ -75,8 +75,8 @@
         addMenuText: "| '+' = add | '-' = remove | '1 - 9' = update hue"
       });
 
-      var currentBaseHue = 0;
-      var totalInitialItems = 100;
+      var currentBaseHue = 100;
+      var totalInitialItems = 10;
       var seekTarget = null;
 
       var createFlocker = function(props) {
@@ -94,7 +94,7 @@
           maxScale: 4,
           hueMin: currentBaseHue,
           hueMax: currentBaseHue + 30,
-          massMin: 1,
+          massMin: 20,
           massMax: 200,
           maxBlur: 20,
           maxSpeed: 4,
@@ -142,13 +142,12 @@
        * Create a new BitShadowMachine system.
        */
       BitShadowMachine.System.recordData = true;
-      BitShadowMachine.System.totalFrames = 10;
+      BitShadowMachine.System.totalFrames = 600;
       BitShadowMachine.System.frameCompleteCallback = function(frameNumber, data) {
         socket.emit('setData', {
           frameNumber: frameNumber,
           data: data
         });
-        console.log(data);
       };
       BitShadowMachine.System.init(function() {
 

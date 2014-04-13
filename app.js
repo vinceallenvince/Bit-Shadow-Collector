@@ -8,7 +8,7 @@ io.sockets.on('connection', function(socket) {
   socket.on('setData', function(results) {
     var stream;
     if (results.data) {
-    	stream = fs.createWriteStream('data/agent_data' + results.frameNumber + '.json');
+    	stream = fs.createWriteStream('data/frame' + results.frameNumber + '.json');
     } else {
       return;
     }

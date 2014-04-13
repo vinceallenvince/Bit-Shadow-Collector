@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <meta name="keywords" content="Bit-Shadow-Machine" />
+  <meta name="description" content="Bit-Shadow Machine renders particles in a web browser using CSS box shadows." />
+  <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name='apple-mobile-web-app-capable' content='yes' />
+  <title>Bit-Shadow Machine</title>
+  <link rel="stylesheet" href="css/BitShadowMachine.min.css" type="text/css" charset="utf-8" />
+  <script src="scripts/Modernizr.min.js" type="text/javascript" charset="utf-8"></script>
+  <script src="scripts/BitShadowMachine.min.js" type="text/javascript" charset="utf-8"></script>
+  <script src="scripts/Flocker.js" type="text/javascript" charset="utf-8"></script>
+  <script src="scripts/Walker.js" type="text/javascript" charset="utf-8"></script>
+  <script src="scripts/SimplexNoise.js" type="text/javascript" charset="utf-8"></script>
+  </head>
+  <body>
+    <div id='worldA'></div>
+    <script src='http://localhost:1337/socket.io/socket.io.js'></script>
+    <script type="text/javascript">
+      var socket = io.connect('http://localhost:1337');
+      socket.on('dataSet', function(frameNumber) {
+        console.log('data set frame: ' + frameNumber);
+      });
+    </script>
+    <script type="text/javascript" charset="utf-8">
+
+      var totalItems = 300;
+      var getRandomNumber = BitShadowMachine.Utils.getRandomNumber;
+      var map = BitShadowMachine.Utils.map;
+      var paletteA = new BitShadowMachine.ColorPalette();
+      paletteA.addColor({
+        min: 12,
+        max: 24,
+        startColor: [248, 215, 173],
+        endColor: [230, 186, 131]
+      });
+
+      var paletteB = new BitShadowMachine.ColorPalette();
+      paletteB.addColor({
+        min: 12,
+        max: 24,
+        startColor: [244, 192, 157],
+        endColor: [218, 149, 103]
+      });
+
+      var paletteC = new BitShadowMachine.ColorPalette();
+      paletteC.addColor({
+        min: 12,
+        max: 24,
+        startColor: [255, 243, 216],
+        endColor: [230, 210, 167]
+      });
+
+      var paletteD = new BitShadowMachine.ColorPalette();
+      paletteD.addColor({
+        min: 12,
+        max: 24,
+        startColor: [250, 219, 142],
+        endColor: [222, 182, 84]
+      });
+
+      var paletteE = new BitShadowMachine.ColorPalette();
+      paletteE.addColor({
+        min: 12,
+        max: 24,
+        startColor: [252, 221, 205],
+        endColor: [219, 164, 134]
+      });
+
+      /*var palette = new BitShadowMachine.ColorPalette();
+      palette.addColor({
+        min: 12,
+        max: 24,
+        startColor: [248, 215, 173],
+        endColor: [230, 186, 131]
+      }).addColor({
+        min: 12,
+        max: 24,
+        startColor: [244, 192, 157],
+        endColor: [218, 149, 103]
+      }).addColor({
+        min: 12,
+        max: 24,
+        startColor: [255, 243, 216],
+        endColor: [230, 210, 167]
+      }).addColor({
+        min: 12,
+        max: 24,
+        startColor: [250, 219, 142],
+        endColor: [222, 182, 84]
+      }).addColor({
+        min: 12,
+        max: 24,
+        startColor: [252, 221, 205],
+        endColor: [219, 164, 134]
+      });*/
+
+      var klasses = {
+        Flocker: Flocker,
+        Walker: Walker
+      };
+
+      /**
+       * Tell BitShadowMachine where to find classes.
+       */
+      BitShadowMachine.Classes = klasses;
+
+      var worldA = new BitShadowMachine.World(document.getElementById('worldA'), {
+        width: 960,
+        height: 540,
+        resolution: 4,
+        backgroundColor: [0, 0, 0],
+        colorMode: 'rgba'
+      });
+
+      var createFlocker = function(props) {
+        var location = new BitShadowMachine.Vector(BitShadowMachine.System.firstWorld().width / 2,
+              BitShadowMachine.System.firstWorld().height / 2);
+        var offset = new BitShadowMachine.Vector(1, 1);
+        offset.normalize();
+        offset.rotate(getRandomNumber(0, 360));
+        offset.mult(getRandomNumber(1, 100, true));
+        location.add(offset);
+
+        addFlocker({
+          location: location,
+          size: 4,
+          maxScale: 10,
+          massMin: 10,
+          massMax: 200,
+          maxBlur: 20,
+          maxSpeed: 4,
+          seekTarget: props.seekTarget,
+          palette: props.palette
+        });
+      };
+
+      var addFlocker = function(props) {
+
+        var mass = getRandomNumber(props.massMin, props.massMax);
+
+        var flocker = BitShadowMachine.System.add('Flocker', {
+          beforeStep: function() {
+            //var mag = this.velocity.mag();
+            //this.opacity = this.baseOpacity + map(mag, 0, this.maxSpeed * 0.75, 0.1, 0.5);
+            //this.blur = map(mag, 0, this.maxSpeed * 0.75, 0, this.maxBlur);
+          },
+          location: props.location,
+          width: map(mass, props.massMin, props.massMax, 0.25, props.maxScale),
+          height: map(mass, props.massMin, props.massMax, 0.25, props.maxScale),
+          mass: mass,
+          opacity: map(mass, props.massMin, props.massMax, 1, 0.1),
+          scale: map(mass, props.massMin, props.massMax, 0.25, props.maxScale),
+          maxSpeed: props.maxSpeed,
+          color: props.palette.getColor(),
+          maxBlur: props.maxBlur,
+          seekTarget: props.seekTarget,
+          maxSteeringForce: 100,
+          separateStrength: 0.75
+        });
+      };
+
+      /**
+       * Create a new BitShadowMachine system.
+       */
+      BitShadowMachine.System.recordData = true;
+      BitShadowMachine.System.recordStartFrame = 0;
+      BitShadowMachine.System.recordEndFrame = 3600;
+      BitShadowMachine.System.totalFrames = 3600;
+      BitShadowMachine.System.frameCompleteCallback = function(frameNumber, data) {
+        socket.emit('setData', {
+          frameNumber: frameNumber,
+          data: data
+        });
+      };
+      BitShadowMachine.System.init(function() {
+
+        var location = new BitShadowMachine.Vector(BitShadowMachine.System.firstWorld().width / 2,
+            BitShadowMachine.System.firstWorld().height / 2);
+
+        var seekTargetA = this.add('Walker', {
+          location: new BitShadowMachine.Vector(location.x, location.y),
+          blur: 0,
+          scale: 1,
+          opacity: 1,
+          remainsOnScreen: false,
+          perlinSpeed: 0.005,
+          perlinAccelLow: -2.5,
+          perlinAccelHigh: 2.5,
+          opacity: 0,
+          color: [200, 200, 200]
+        });
+
+        for (var i = 0; i < totalItems; i++) {
+          createFlocker({
+            seekTarget: seekTargetA,
+            palette: paletteA
+          });
+        }
+
+        var seekTargetB = this.add('Walker', {
+          location: new BitShadowMachine.Vector(location.x, location.y),
+          blur: 0,
+          scale: 1,
+          opacity: 1,
+          remainsOnScreen: false,
+          perlinSpeed: 0.005,
+          perlinAccelLow: -2.5,
+          perlinAccelHigh: 2.5,
+          opacity: 0,
+          color: [255, 0, 0]
+        });
+
+        for (var i = 0; i < totalItems; i++) {
+          createFlocker({
+            seekTarget: seekTargetB,
+            palette: paletteB
+          });
+        }
+
+        var seekTargetC = this.add('Walker', {
+          location: new BitShadowMachine.Vector(location.x, location.y),
+          blur: 0,
+          scale: 1,
+          opacity: 1,
+          remainsOnScreen: false,
+          perlinSpeed: 0.005,
+          perlinAccelLow: -2.5,
+          perlinAccelHigh: 2.5,
+          opacity: 0,
+          color: [255, 0, 0]
+        });
+
+        for (var i = 0; i < totalItems; i++) {
+          createFlocker({
+            seekTarget: seekTargetC,
+            palette: paletteC
+          });
+        }
+
+        var seekTargetD = this.add('Walker', {
+          location: new BitShadowMachine.Vector(location.x, location.y),
+          blur: 0,
+          scale: 1,
+          opacity: 1,
+          remainsOnScreen: false,
+          perlinSpeed: 0.005,
+          perlinAccelLow: -2.5,
+          perlinAccelHigh: 2.5,
+          opacity: 0,
+          color: [255, 0, 0]
+        });
+
+        for (var i = 0; i < totalItems; i++) {
+          createFlocker({
+            seekTarget: seekTargetD,
+            palette: paletteD
+          });
+        }
+
+        var seekTargetE = this.add('Walker', {
+          location: new BitShadowMachine.Vector(location.x, location.y),
+          blur: 0,
+          scale: 1,
+          opacity: 1,
+          remainsOnScreen: false,
+          perlinSpeed: 0.005,
+          perlinAccelLow: -2.5,
+          perlinAccelHigh: 2.5,
+          opacity: 0,
+          color: [255, 0, 0]
+        });
+
+        for (var i = 0; i < totalItems; i++) {
+          createFlocker({
+            seekTarget: seekTargetE,
+            palette: paletteE
+          });
+        }
+
+      }, worldA, Modernizr);
+    </script>
+  </body>
+</html>

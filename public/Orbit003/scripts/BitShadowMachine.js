@@ -1,8 +1,8 @@
-/*! BitShadowMachine v2.0.2 - 2013-10-06 11:10:30 
- *  Vince Allen 
- *  Brooklyn, NY 
- *  vince@vinceallen.com 
- *  @vinceallenvince 
+/*! BitShadowMachine v2.0.7 - 2013-10-26 06:10:22
+ *  Vince Allen
+ *  Brooklyn, NY
+ *  vince@vinceallen.com
+ *  @vinceallenvince
  *  License: MIT */
 
 var BitShadowMachine = {}, exports = BitShadowMachine;
@@ -177,6 +177,25 @@ Utils.radiansToDegrees = function(radians) {
     }
     return false;
   }
+};
+
+/**
+ * Constrain a value within a range.
+ *
+ * @function constrain
+ * @memberof Utils
+ * @param {number} val The value to constrain.
+ * @param {number} low The lower bound of the range.
+ * @param {number} high The upper bound of the range.
+ * @returns {number} A number.
+ */
+Utils.constrain = function(val, low, high) {
+  if (val > high) {
+    return high;
+  } else if (val < low) {
+    return low;
+  }
+  return val;
 };
 exports.Utils = Utils;
 
@@ -866,6 +885,18 @@ System.totalFrames = -1;
 System.recordData = false;
 
 /**
+ * Recording starts with this frame number.
+ * @type number
+ */
+System.recordStartFrame = null;
+
+/**
+ * Recording ends with this frame number.
+ * @type number
+ */
+System.recordEndFrame = null;
+
+/**
  * Defines the properties to save in System.recordedData for each item
  * in each frame.
  * @type Object
@@ -899,7 +930,8 @@ System.recordWorldProperties = {
   width: true,
   height: true,
   resolution: true,
-  colorMode: true
+  colorMode: true,
+  backgroundColor: true
 };
 
 /**
@@ -1036,10 +1068,9 @@ System._addWorld = function(world) {
  */
 System.add = function(klass, opt_options, opt_world) {
 
-  var i, max, last, parentNode, pool,
+  var options = opt_options || {},
       records = this._records.list,
-      recordsLookup = this._records.lookup,
-      options = opt_options || {};
+      i, max, item, pool;
 
   options.world = opt_world || records[0];
 
@@ -1049,23 +1080,21 @@ System.add = function(klass, opt_options, opt_world) {
   if (pool.length) {
     for (i = 0, max = options.world._pool.length; i < max; i++) {
       if (options.world._pool[i].name === klass) {
-        records[records.length] = options.world._pool.splice(i, 1)[0];
-        records[records.length - 1].options = options;
-        System._updateCacheLookup(records[records.length - 1], true);
+        item = options.world._pool.splice(i, 1)[0];
         break;
       }
     }
   } else {
     if (BitShadowMachine[klass]) {
-      records[records.length] = new BitShadowMachine[klass](options);
+      item = new BitShadowMachine[klass](options);
     } else {
-      records[records.length] = new BitShadowMachine.Classes[klass](options);
+      item = new BitShadowMachine.Classes[klass](options);
     }
   }
-  last = records.length - 1;
-  records[last].reset(options);
-  records[last].init(options);
-  return records[last];
+  item.reset(options);
+  item.init(options);
+  System._records.list.push(item);
+  return item;
 };
 
 /**
@@ -1232,11 +1261,11 @@ System._update = function() {
 
   // setup entry in System.recordedData
   if (System.recordData) {
-    System.recordedData.push({
+    System.recordedData = [{
       frame: System.clock,
       world: {},
       items: []
-    });
+    }];
   }
 
   // step
@@ -1246,6 +1275,9 @@ System._update = function() {
       record.step();
     }
     if (System.recordData && record.name !== 'World' && record.opacity) { // we don't want to record World data as Item
+      if (!System._checkRecordFrame()) {
+        continue;
+      }
       System.recordedData[System.recordedData.length - 1].items.push({});
       System._saveData(System.recordedData[System.recordedData.length - 1].items.length - 1, record);
     }
@@ -1292,8 +1324,10 @@ System._update = function() {
     console.timeEnd('render');
   }
 
-  if (System.totalFrames > -1) {
-    System.frameCompleteCallback(System.clock, System.recordedData[System.clock]);
+  // check to call frame complete callback.
+  if (System.totalFrames > -1 && System._checkRecordFrame()) {
+    System.frameCompleteCallback(System.clock, System.recordedData[0]);
+    System.recordedData = null;
   }
 
   System.clock++;
@@ -1306,7 +1340,7 @@ System._update = function() {
  */
 System.frameCompleteCallback = function(frameNumber, data) {
   if (console) {
-    console.log('Rendered ' + frameNumber + ' frame.');
+    console.log('Rendered frame ' + frameNumber + '.');
   }
 };
 
@@ -1407,12 +1441,27 @@ System._saveData = function(index, record) {
       }
       System.recordedData[System.recordedData.length - 1].items[index][i] = val;
     }
-    for (var j in record.world) {
-      if (record.world.hasOwnProperty(j) && System.recordWorldProperties[j]) {
-        System.recordedData[System.recordedData.length - 1].world[j] = record.world[j];
+    if (!System.recordedData[System.recordedData.length - 1].world.id) {
+      for (var j in record.world) {
+        if (record.world.hasOwnProperty(j) && System.recordWorldProperties[j]) {
+          System.recordedData[System.recordedData.length - 1].world[j] = record.world[j];
+        }
       }
     }
   }
+};
+
+/**
+ * If recordStartFrame and recordEndFrame have been specified,
+ * checks if System.clock is within bounds.
+ * @returns {Boolean} True if frame should be recorded.
+ */
+System._checkRecordFrame = function() {
+  if (System.recordStartFrame && System.recordEndFrame &&
+      (System.recordStartFrame > System.clock || System.clock > System.recordEndFrame)) {
+    return false;
+  }
+  return true;
 };
 
 /**

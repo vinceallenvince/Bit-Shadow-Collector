@@ -5,4 +5,4 @@ data
 #### FILES ####
 *.DS_Store
 *.swp
-agent_data.json
+*.json
