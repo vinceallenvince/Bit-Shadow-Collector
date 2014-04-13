@@ -18,8 +18,8 @@
     <script src='http://localhost:1337/socket.io/socket.io.js'></script>
     <script type="text/javascript">
       var socket = io.connect('http://localhost:1337');
-      socket.on('dataSet', function(data) {
-        alert('data set!');
+      socket.on('dataSet', function(frameNumber) {
+        console.log('data set frame: ' + frameNumber);
       });
     </script>
     <script type="text/javascript" charset="utf-8">
@@ -75,8 +75,8 @@
         addMenuText: "| '+' = add | '-' = remove | '1 - 9' = update hue"
       });
 
-      var currentBaseHue = 0;
-      var totalInitialItems = 20;
+      var currentBaseHue = 100;
+      var totalInitialItems = 10;
       var seekTarget = null;
 
       var createFlocker = function(props) {
@@ -94,7 +94,7 @@
           maxScale: 4,
           hueMin: currentBaseHue,
           hueMax: currentBaseHue + 30,
-          massMin: 1,
+          massMin: 20,
           massMax: 200,
           maxBlur: 20,
           maxSpeed: 4,
@@ -142,10 +142,12 @@
        * Create a new BitShadowMachine system.
        */
       BitShadowMachine.System.recordData = true;
-      BitShadowMachine.System.totalFrames = 3600;
-      BitShadowMachine.System.totalFramesCallback = function() {
-        console.log(BitShadowMachine.System.recordedData);
-        socket.emit('setData', BitShadowMachine.System.recordedData);
+      BitShadowMachine.System.totalFrames = 600;
+      BitShadowMachine.System.frameCompleteCallback = function(frameNumber, data) {
+        socket.emit('setData', {
+          frameNumber: frameNumber,
+          data: data
+        });
       };
       BitShadowMachine.System.init(function() {
 
