@@ -4,6 +4,8 @@ var connect = require('connect'),
 
 connect(connect.static(__dirname + '/public')).listen(8000);
 
+io.set('heartbeat timeout', 10000);
+io.set('heartbeat interval', 9000);
 io.sockets.on('connection', function(socket) {
   socket.on('setData', function(results) {
     var stream;

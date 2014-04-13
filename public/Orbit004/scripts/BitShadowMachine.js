@@ -1,4 +1,4 @@
-/*! BitShadowMachine v2.0.7 - 2013-10-26 06:10:22 
+/*! BitShadowMachine v2.0.15 - 2014-04-13 12:04:18 
  *  Vince Allen 
  *  Brooklyn, NY 
  *  vince@vinceallen.com 
@@ -930,7 +930,8 @@ System.recordWorldProperties = {
   width: true,
   height: true,
   resolution: true,
-  colorMode: true
+  colorMode: true,
+  backgroundColor: true
 };
 
 /**
@@ -949,6 +950,12 @@ System.recordWorldProperties = {
  ]
  */
 System.recordedData = [];
+
+/**
+ * Set to 1 to sort System._records.list by zIndex.
+ * @type Number
+ */
+System.zSort = 0;
 
 /**
  * Initializes the system and starts the update loop.
@@ -1288,6 +1295,9 @@ System._update = function() {
   }
 
   // draw
+  if (System.zSort) {
+    records = records.sort(function(a,b){return (a.zIndex - b.zIndex);});
+  }
 
   // loop thru records and build box shadows
   for (i = records.length - 1; i >= 0; i -= 1) {
@@ -1819,7 +1829,7 @@ System._recordMouseLoc = function(e) {
 };
 
 /**
- * Handles orientation evenst and forces the world to update its bounds.
+ * Handles orientation events and forces the world to update its bounds.
  *
  * @function updateOrientation
  * @memberof System
@@ -1851,6 +1861,30 @@ exports.System = System;
 
 /**
  * Creates a new World.
+ *
+ * @param {Object} [opt_options=] A map of initial properties.
+ * @param {Object} [opt_options.gravity = new Vector(0, 0.01)] Gravity vector.
+ * @param {number} [opt_options.c = 0.1] Coefficient of friction.
+ * @param {number} [opt_options.resolution = 4] The world resolution. Items with scale = 1 will
+ *   render with this value as their spread value.
+ * @param {number} [opt_options.width = viewportSize.width / this.resolution] The world's width.
+ * @param {number} [opt_options.height = viewportSize.height / this.resolution] The world's height.
+ * @param {number} [opt_options.borderRadius = 0] The world's borderRadius expressed as a percentage.
+ *   Some browsers (Safari) will pass this value to the world's box-shadows.
+ * @param {number} [opt_options.opacity = 1] The world's opacity.
+ * @param {number} [opt_options.zIndex = 1] The world's zIndex.
+ * @param {number} [opt_options.colorMode = 'rgba'] The world's colorMode. Valid values are 'rgba' and 'hsla'.
+ *   If Modernizr detects that the browser does not support alpha channels, the world's opacity property
+ *   will be used for opacity.
+ * @param {Array|string} [opt_options.backgroundColor = 'transparent'] The world's color. If colorMode = 'rgba',
+ *   pass in an array formatted as [red, green, blue, alpha]. If colorMode = 'hsla', this property will
+ *   be ignored.
+ * @param {number} [opt_options.hue = 0] The world's hue. Used if colorMode = 'hsla'.
+ * @param {number} [opt_options.saturation = 1] The world's saturation. Used if colorMode = 'hsla'.
+ * @param {number} [opt_options.lightness = 0.5] The world's lightness. Used if colorMode = 'hsla'.
+ * @param {string} [opt_options.addMenuText = ''] If the world's menu is activated, this text is appended.
+ * @param {boolean} [opt_options.noMenu = undefined] If true, the world does not display a menu.
+ *
  * @constructor
  */
 function World(opt_el, opt_options) {
@@ -1860,7 +1894,7 @@ function World(opt_el, opt_options) {
 
   this.gravity = options.gravity || new exports.Vector(0, 0.01);
   this.c = options.c || 0.1;
-  this.resolution = options.resolution || 8;
+  this.resolution = options.resolution || 4;
   this.width = options.width / this.resolution || viewportSize.width / this.resolution;
   this.height = options.height / this.resolution || viewportSize.height / this.resolution;
   this.borderRadius = options.borderRadius || 0;
@@ -1914,13 +1948,14 @@ function World(opt_el, opt_options) {
       container.appendChild(this.menu);
       this.menuHidden = false;
     }
-
+    
     document.body.appendChild(container);
-
+    
   }
 
   /**
    * Object pool used to recycle objects.
+   * @private
    */
   this._pool = [];
 
@@ -1945,6 +1980,11 @@ exports.World = World;
 
 /**
  * Creates a new Item.
+ *
+ * @param {Object} [opt_options=] A map of initial properties.
+ * @param {Object} [opt_options.world = undefined] A Bit-Shadow World. Required.
+ * @param {number} [opt_options.name = 'Item'] Name.
+ *
  * @constructor
  */
 function Item(opt_options) {
@@ -1963,6 +2003,9 @@ function Item(opt_options) {
   this.scale = null;
 }
 
+/**
+ * Initializes the Item.
+ */
 Item.prototype.init = function() {
   if (console) {
     console.log('init is not implemented.');
@@ -1971,7 +2014,12 @@ Item.prototype.init = function() {
 
 /**
  * Sets item's properties via initial options.
- * @private
+ *
+ * @param {Object} [opt_options=] A map of initial properties.
+ * @param {number} [opt_options.blur = 0] Blur.
+ * @param {number} [opt_options.scale = 1] Scale. Use to change the item's size.
+ * @param {number} [opt_options.opacity = 1] Opacity. Valid values are between 0 and 1.
+ * @param {Array} [opt_options.color = [0, 0, 0]] Color.
  */
 Item.prototype.reset = function(opt_options) {
 
@@ -1991,5 +2039,163 @@ Item.prototype.reset = function(opt_options) {
 };
 
 exports.Item = Item;
+
+function Anim(opt_options) {
+  var options = opt_options || {};
+  options.name = 'Anim';
+  Item.call(this, options);
+}
+Utils.extend(Anim, Item);
+
+/**
+ * Initializes the Anim.
+ * @param {Object} [opt_options=] A map of initial properties.
+ * @param {number} [opt_options.scale = 0] Scale. Set to a higher value for debugging.
+ * @param {Array} [opt_options.color = [0, 0, 0]] Color. Set color for debugging if scale > 0.
+ * @param {number} [opt_options.zIndex = 0] zIndex. Set to a higher value to place this pixel on a higher layer.
+ * @param {Object} [opt_options.location = new Vector] Location.
+ * @param {Array} [opt_options.frames = []] The frames to animate.
+ * @param {number} [opt_options.currentFrame = 0] The current animation frame.
+ *
+ * @example The 'frames' property should be formatted like:
+ * var obj = [
+ *   {"items":
+ *     [
+ *       {"x":9,"y":-30,"color":[255,255,255],"opacity":255,"scale":1},
+ *       {"x":17,"y":-30,"color":[255,255,255],"opacity":255,"scale":1}
+ *     ]
+ *   }
+ * ];
+ */
+Anim.prototype.init = function(options) {
+
+  /*
+   * At scale = 0, the origin point will be hidden. Set scale and
+   * color for help w debugging.
+   */
+  this.scale = options.scale || 0;
+  this.color = options.color || [0, 0, 0];
+  this.location = options.location || new BitShadowMachine.Vector(this.world.width / 2, this.world.height / 2);
+
+  this.frames = options.frames || [];
+  this.currentFrame = options.currentFrame !== 'undefined' ? 0 : options.currentFrame;
+  this.loop = options.loop !== 'undefined' ? true : options.loop;
+
+  this.frameDuration = options.frameDuration || 3;
+
+  /**
+   * Anim instances must be stored in System._records.list at a lower index
+   * than their associated AnimUnit instance. If System.zSorted = true,
+   * we sort System._records.list by zIndex. Since Anim instances are
+   * invisible (while their AnimUnits are rendered), we can force a negative
+   * zIndex and keep them at the bottom of System._records.list.
+   */
+  this.zIndex = -options.zIndex || -1;
+
+  /**
+   * The internal frame count that is checked against
+   * frameDuration to see if we should advance the frame.
+   * @private
+   */
+  this._frameCount = 0;
+
+  /**
+   * Flag if there's only one frame in the animation. Use to prevent
+   * creating/removing static AnimUnits.
+   */
+  this._singleFrame = false;
+
+};
+
+
+/**
+ * Updates properties.
+ */
+Anim.prototype.step = function() {
+
+  if (this._singleFrame) {
+    return;
+  }
+
+  if (this._frameCount < this.frameDuration) {
+    this._frameCount++;
+  } else {
+    this.advanceFrame();
+    this._frameCount = 0;
+  }
+};
+
+/*
+ * Loops thru all entries in the 'frames' property and
+ * creates instances of AnimUnit.
+ */
+Anim.prototype.advanceFrame = function() {
+
+  var i, max, animUnits, item, frame;
+
+  // create new anim pixels
+  if (this.frames.length) {
+    frame = this.frames[this.currentFrame];
+    for (i = 0, max = frame.items.length; i < max; i++) {
+      item = frame.items[i];
+      BitShadowMachine.System.add('AnimUnit', {
+        location: new BitShadowMachine.Vector(this.location.x + item.x, this.location.y + item.y),
+        color: item.color,
+        scale: 1,
+        opacity: item.opacity,
+        parentId: this.id,
+        zIndex: -this.zIndex // reverse the zIndex value so the intended value is passed to the AnimUnit
+      }, this.world);
+    }
+  }
+
+  // if there's only 1 frame, set singleFrame flag.
+  if (this.frames.length === 1) {
+    this._singleFrame = true;
+  }
+
+  if (this.currentFrame + 1 < this.frames.length) {
+    this.currentFrame++;
+  } else if (this.loop) {
+    this.currentFrame = 0;
+  }
+};
+
+exports.Anim = Anim;
+
+function AnimUnit(opt_options) {
+  var options = opt_options || {};
+  options.name = 'AnimUnit';
+  Item.call(this, options);
+}
+Utils.extend(AnimUnit, Item);
+
+/**
+ * Initializes the AnimUnit.
+ * @param {Object} options Initial options.
+ */
+AnimUnit.prototype.init = function(options) {
+  if (!options.location) {
+    throw new Error('AnimUnit.init: location required.');
+  }
+  this.location = options.location;
+  this.scale = options.scale || 1;
+  this.color = options.color || [100, 100, 100];
+  this.zIndex = options.zIndex || 1; // the default value must be > 0
+  this.currentFrame = 0;
+};
+
+/**
+ * Checks if parent Anim is advancing the frame. If so,
+ * this object destoys itself.
+ */
+AnimUnit.prototype.step = function() {
+  var parent = System.getItem(this.parentId); // TODO: this is really inefficient; need to reference the parent another way
+  if (parent._frameCount >= parent.frameDuration) {
+    BitShadowMachine.System.destroyItem(this);
+  }
+};
+
+exports.AnimUnit = AnimUnit;
 
 }(exports));
