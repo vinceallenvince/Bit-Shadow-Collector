@@ -4,10 +4,11 @@ var connect = require('connect'),
 
 connect(connect.static(__dirname + '/public')).listen(8000);
 
-io.set('heartbeats', true);
+//io.set('heartbeats', true);
 /*io.set('close timeout', 60000);
 io.set('heartbeat timeout', 100000);
 io.set('heartbeat interval', 90000);*/
+
 io.sockets.on('connection', function(socket) {
   socket.on('setData', function(results) {
     var stream;
